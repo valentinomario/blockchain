@@ -19,16 +19,29 @@ Chain::Chain(const hash_t& aDifficulty, const content_t& aGenesisData) {
     mCurrentBlockId = mBlockChain.size() - 1;
 }
 
-void Chain::AppendDataToBlock(const content_t& aData) {
-    mBlockChain[mCurrentBlockId]->AppendData(aData);
+void Chain::AppendPendingData(const content_t& aData) {
+    if (!aData.empty()) {
+        mPendingData.push_back(aData);
+    }
 }
 
-void Chain::NewBlock() {
+bool Chain::MinePendingBlock() {
+    if (mPendingData.empty()) {
+        return false;
+    }
+
     auto new_block =
         std::make_unique<Block>(mBlockChain[mCurrentBlockId].get());
+
+    for (const auto& data : mPendingData) {
+        new_block->AppendData(data);
+    }
+
     new_block->Mine(mDifficulty);
     mBlockChain.push_back(std::move(new_block));
     mCurrentBlockId = mBlockChain.size() - 1;
+    mPendingData.clear();
+    return true;
 }
 
 const Block& Chain::GetCurrentBlock() const {

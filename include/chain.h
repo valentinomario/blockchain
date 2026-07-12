@@ -11,12 +11,13 @@ namespace bibochain {
 class Chain {
 public:
     explicit Chain(const hash_t&, const content_t&);
-    void AppendDataToBlock(const content_t&);
-    void NewBlock();
+    void AppendPendingData(const content_t&);
+    bool MinePendingBlock();
     const Block& GetCurrentBlock() const;
 
 private:
     std::vector<std::unique_ptr<Block>> mBlockChain;
+    std::vector<content_t> mPendingData;
     size_t mCurrentBlockId = 0;
     hash_t mDifficulty;
 

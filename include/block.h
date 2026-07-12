@@ -32,19 +32,28 @@ class Block {
 public:
     explicit Block(Block*);
 
+    // Hashing stuff
     void CalcHash();
 
     const hash_t& GetHash() const;
     std::string GetHashStr() const;
     const Block* GetPrevBlock() const;
+    const hash_t& GetContentHash() const;
+    const hash_t& GetPreviousHash() const;
+    uint32_t GetTimestamp() const;
     uint32_t GetNonce() const;
 
+    // Data stuff
     void AppendData(const content_t&);
+    const std::vector<content_t>& GetData() const;
+    const uint32_t& GetContentSize() const;
 
     static bool IsValidHash(const hash_t&, const hash_t&);
     void Mine(const hash_t&);
 
 private:
+    void CalcContentHash();
+
     // Block content
     block_header_t mHeader;
     std::vector<content_t> mData;
@@ -52,6 +61,7 @@ private:
     // Management
     Block* mPreviousBlock = nullptr;
     hash_t mCurrentHash{};
+    bool mIsMined = false;
 };
 
 } // namespace bibochain
