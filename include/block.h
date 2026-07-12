@@ -1,15 +1,10 @@
 #pragma once
 
+#include <cstddef>
 #include <cstdint>
 #include <string>
 #include <types.hpp>
-#include <utils.hpp>
 #include <vector>
-#include <cstddef>
-#include <cstring>
-#include <sstream>
-#include <ctime>
-
 
 namespace bibochain {
 
@@ -28,9 +23,19 @@ using block_header_t = struct BlockHeaderType {
         : mPreviousHash(aPrevHash), mTimestamp(aTimestamp) {};
 };
 
+struct BlockState {
+    uint32_t mContentSize{};
+    hash_t mContentHash{};
+    hash_t mPreviousHash{};
+    uint32_t mTimestamp{};
+    uint32_t mNonce{};
+    hash_t mBlockHash{};
+    std::vector<content_t> mData;
+};
+
 class Block {
 public:
-    explicit Block(Block*);
+    explicit Block(Block* aBlock);
 
     // Hashing stuff
     void CalcHash();
@@ -42,16 +47,20 @@ public:
     const hash_t& GetPreviousHash() const;
     uint32_t GetTimestamp() const;
     uint32_t GetNonce() const;
+    BlockState GetState() const;
 
     // Data stuff
-    void AppendData(const content_t&);
+    void AppendData(const content_t& aData);
     const std::vector<content_t>& GetData() const;
     const uint32_t& GetContentSize() const;
 
-    static bool IsValidHash(const hash_t&, const hash_t&);
-    void Mine(const hash_t&);
+    static bool IsValidHash(const hash_t& aTestHash, const hash_t& aTarget);
+    void Mine(const hash_t& aTarget);
 
 private:
+    friend class Chain;
+
+    Block(Block* aBlock, const BlockState& aState, const hash_t& aDifficulty);
     void CalcContentHash();
 
     // Block content

@@ -1,10 +1,14 @@
 #include <block.h>
+
 #include <cstdint>
 #include <cstring>
+#include <ctime>
 #include <limits>
+#include <sstream>
 #include <stdexcept>
+#include <types.hpp>
+#include <utils.hpp>
 #include <vector>
-#include "types.hpp"
 
 namespace bibochain {
 
@@ -12,6 +16,43 @@ Block::Block(Block* aBlock)
     : mPreviousBlock(aBlock),
       mHeader(aBlock != nullptr ? aBlock->GetHash() : hash_t{},
               static_cast<uint32_t>(time(nullptr))) {}
+
+Block::Block(Block* aBlock, const BlockState& aState, const hash_t& aDifficulty)
+    : mHeader(aState.mPreviousHash, aState.mTimestamp),
+      mData(aState.mData),
+      mPreviousBlock(aBlock) {
+    const hash_t EXPECTED_PREVIOUS_HASH =
+        aBlock == nullptr ? hash_t{} : aBlock->GetHash();
+    if (aState.mPreviousHash != EXPECTED_PREVIOUS_HASH) {
+        throw std::invalid_argument("broken previous block link");
+    }
+    if (aState.mContentSize != aState.mData.size()) {
+        throw std::invalid_argument("invalid block content count");
+    }
+    for (const auto& entry : mData) {
+        if (entry.empty()) {
+            throw std::invalid_argument("empty block content entry");
+        }
+    }
+
+    mHeader.mContentSize = aState.mContentSize;
+    mHeader.mContentHash = aState.mContentHash;
+    mHeader.mNonce = aState.mNonce;
+
+    CalcContentHash();
+    if (mHeader.mContentHash != aState.mContentHash) {
+        throw std::invalid_argument("invalid block content hash");
+    }
+
+    CalcHash();
+    if (mCurrentHash != aState.mBlockHash) {
+        throw std::invalid_argument("invalid stored block hash");
+    }
+    if (!IsValidHash(mCurrentHash, aDifficulty)) {
+        throw std::invalid_argument("stored block does not satisfy target");
+    }
+    mIsMined = true;
+}
 
 void Block::CalcHash() {
     // content size, content hash and prev hash, ts, nonce
@@ -37,21 +78,22 @@ void Block::CalcHash() {
 }
 
 void Block::CalcContentHash() {
-    std::vector<uint8_t> serializedData;
+    std::vector<uint8_t> serialized_data;
 
     for (const auto& entry : mData) {
-        const auto entrySize = static_cast<uint32_t>(entry.size());
+        const auto ENTRY_SIZE = static_cast<uint32_t>(entry.size());
 
-        uint8_t encodedSize[sizeof(uint32_t)];
-        uint8_t* ptr = encodedSize;
-        writeU32LE(ptr, entrySize);
+        uint8_t encoded_size[sizeof(uint32_t)];
+        uint8_t* ptr = encoded_size;
+        writeU32LE(ptr, ENTRY_SIZE);
 
-        serializedData.insert(serializedData.end(), encodedSize,
-                              encodedSize + sizeof(encodedSize));
-        serializedData.insert(serializedData.end(), entry.begin(), entry.end());
+        serialized_data.insert(serialized_data.end(), encoded_size,
+                               encoded_size + sizeof(encoded_size));
+        serialized_data.insert(serialized_data.end(), entry.begin(),
+                               entry.end());
     }
 
-    SHA256(serializedData.data(), serializedData.size(),
+    SHA256(serialized_data.data(), serialized_data.size(),
            mHeader.mContentHash.data());
 }
 
@@ -72,6 +114,16 @@ const hash_t& Block::GetPreviousHash() const { return mHeader.mPreviousHash; }
 uint32_t Block::GetTimestamp() const { return mHeader.mTimestamp; }
 
 uint32_t Block::GetNonce() const { return mHeader.mNonce; }
+
+BlockState Block::GetState() const {
+    return BlockState{mHeader.mContentSize,
+                      mHeader.mContentHash,
+                      mHeader.mPreviousHash,
+                      mHeader.mTimestamp,
+                      mHeader.mNonce,
+                      mCurrentHash,
+                      mData};
+}
 
 void Block::AppendData(const content_t& aData) {
     if (aData.empty()) return;

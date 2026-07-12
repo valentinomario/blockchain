@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <memory>
+#include <stdexcept>
 #include <types.hpp>
 #include <vector>
 
@@ -16,6 +17,21 @@ Chain::Chain(const hash_t& aDifficulty, const content_t& aGenesisData) {
     genesis->Mine(aDifficulty);
 
     mBlockChain.push_back(std::move(genesis));
+    mCurrentBlockId = mBlockChain.size() - 1;
+}
+
+Chain::Chain(const hash_t& aDifficulty, const std::vector<BlockState>& aBlocks)
+    : mDifficulty(aDifficulty) {
+    if (aBlocks.empty()) {
+        throw std::invalid_argument("cannot load an empty blockchain");
+    }
+
+    for (const auto& state : aBlocks) {
+        Block* previous_block =
+            mBlockChain.empty() ? nullptr : mBlockChain.back().get();
+        mBlockChain.push_back(std::unique_ptr<Block>(
+            new Block(previous_block, state, aDifficulty)));
+    }
     mCurrentBlockId = mBlockChain.size() - 1;
 }
 

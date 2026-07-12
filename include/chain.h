@@ -1,17 +1,19 @@
 #pragma once
+#include <block.h>
+
 #include <cstddef>
 #include <memory>
 #include <types.hpp>
 #include <utils.hpp>
 #include <vector>
-#include <block.h>
 
 namespace bibochain {
 
 class Chain {
 public:
-    explicit Chain(const hash_t&, const content_t&);
-    void AppendPendingData(const content_t&);
+    explicit Chain(const hash_t& aDifficulty, const content_t& aGenesisData);
+    Chain(const hash_t& aDifficulty, const std::vector<BlockState>& aBlocks);
+    void AppendPendingData(const content_t& aData);
     bool MinePendingBlock();
     const Block& GetCurrentBlock() const;
 
@@ -20,7 +22,6 @@ private:
     std::vector<content_t> mPendingData;
     size_t mCurrentBlockId = 0;
     hash_t mDifficulty;
-
 };
 
 } // namespace bibochain
