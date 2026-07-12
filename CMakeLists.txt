@@ -27,4 +27,12 @@ if(BUILD_TESTING)
     add_executable(bibochain_integration_test tests/integration_test.cpp)
     target_link_libraries(bibochain_integration_test PRIVATE bibochain_core)
     add_test(NAME bibochain_integration COMMAND bibochain_integration_test)
+
+    add_test(
+        NAME bibochain_automatic_mode
+        COMMAND ${CMAKE_COMMAND}
+                -DBIBOCHAIN_EXECUTABLE=$<TARGET_FILE:bibochain>
+                -DINSPECTOR_EXECUTABLE=$<TARGET_FILE:bibochain_storage_inspector>
+                -DTEST_STORAGE=${CMAKE_CURRENT_BINARY_DIR}/automatic-mode-test-data
+                -P ${CMAKE_CURRENT_SOURCE_DIR}/tests/automatic_mode_test.cmake)
 endif()
